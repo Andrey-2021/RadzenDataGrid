@@ -1,0 +1,157 @@
+﻿@page "/"
+@using Microsoft.EntityFrameworkCore
+@using Radzen
+@using System.Linq.Dynamic.Core;
+
+<PageTitle>Home</PageTitle>
+<h1>Hello, world!</h1>
+
+
+<div style="margin:5px;">
+	<RadzenButton Click="OnSave">First step -> Add Data to Db</RadzenButton>
+</div>
+<div style="margin:5px;">
+	<RadzenButton Click="OnLoadAllDataFromDb">Second step -> Load data from Db</RadzenButton>
+</div>
+
+@if (DataFromDb != null)
+{
+
+	<table>
+		<thead>
+			<tr>
+				<th>Id</th>
+				<th>Index</th>
+				<th>Code</th>
+				<th>Name</th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var item in DataFromDb)
+			{
+				<tr>
+					<td>@item.Id</td>
+					<td>@item.ServiceBase.Index</td>
+					<td>@item.ServiceBase.Code></td>
+					<td>@item.ServiceBase.ServiceName></td>
+				</tr>
+			}
+		</tbody>
+	</table>
+}
+<br />
+<br />
+
+<RadzenDataGrid AllowSorting="true"
+				AllowFiltering="true"
+				PageSize=10
+				AllowPaging="true"
+				ShowPagingSummary="true"
+				Data=@Entities
+				TItem=@PriceListService
+				LoadData=@OnLoadDataAsync
+				Count=@count
+				IsLoading=@isLoading>
+	<Columns>
+		<RadzenDataGridColumn TItem=@PriceListService
+							  Property=@(nameof(PriceListService.Id))
+							  Title="Id"
+							  Filterable="true" Sortable="true" />
+
+		<RadzenDataGridColumn TItem=@PriceListService
+							  Property=@(nameof(PriceListService.ServiceBase)+"."+nameof(PriceListService.ServiceBase.Index))
+							  Title="Index"
+							  Filterable="true" Sortable="true" />
+
+		<RadzenDataGridColumn TItem=@PriceListService
+							  Property=@(nameof(PriceListService.ServiceBase)+"."+nameof(PriceListService.ServiceBase.Code))
+							  Title="Code"
+							  Filterable="true" Sortable="true" />
+
+		<RadzenDataGridColumn TItem=@PriceListService
+							  Property=@(nameof(PriceListService.ServiceBase)+"."+nameof(PriceListService.ServiceBase.ServiceName))
+							  Title="Name"
+							  Filterable="true" Sortable="true" />
+	</Columns>
+</RadzenDataGrid>
+
+@if (ErrorMessages.Count>0)
+{
+	@foreach (var item in ErrorMessages)
+	{
+		<div style="color:red;">@item</div>
+	}
+}
+
+
+@code {
+	[Inject] IDbContextFactory<MyDbContetx> DbFactory { get; set; }
+
+	protected bool isLoading;
+	protected int count;
+	protected IEnumerable<PriceListService>? Entities { get; set; }
+	protected IEnumerable<PriceListService>? DataFromDb { get; set; }
+	protected List<string> ErrorMessages { get; set; } = new();
+
+
+	protected async Task OnSave()
+	{
+		using (var db = DbFactory.CreateDbContext())
+		{
+			var data = new List<PriceListService>()
+			{
+				new (){ServiceBase=new (){Index=10,Code="a-001", ServiceName="Message"}},
+				new() {ServiceBase = new() { Index = 11, Code = "b-002", ServiceName = "Info" } },
+				new() {ServiceBase = new() { Index = 12, Code = "w-003", ServiceName = "Word" } },
+				new() {ServiceBase = new() { Index = 13, Code = "f-004", ServiceName = "Hi" } },
+				new() {ServiceBase = new() { Index = 14, Code = "z-005", ServiceName = "Zoom" } }
+			};
+			db.PriceListServices.AddRange(data);
+			await db.SaveChangesAsync();
+		}
+	}
+
+	protected async Task OnLoadAllDataFromDb()
+	{
+		try
+		{
+			using (var db = DbFactory.CreateDbContext())
+			{
+				DataFromDb = await db.PriceListServices.ToListAsync();
+			}
+		}
+		catch (Exception ex)
+		{
+			ErrorMessages.Add(DateTime.Now+ "? Exception: " + ex.Message+ (ex.InnerException == null ? "" : ",   InnerExeption: " + ex.InnerException.Message));
+		}
+	}
+
+	protected async Task OnLoadDataAsync(LoadDataArgs args)
+	{
+		isLoading = true;
+		try
+		{
+			using (var db = DbFactory.CreateDbContext())
+			{
+				var query = db.PriceListServices.AsQueryable();
+
+				if (!string.IsNullOrEmpty(args.Filter))
+				{
+					query = query.Where(args.Filter);
+				}
+
+				if (!string.IsNullOrEmpty(args.OrderBy))
+				{
+					query = query.OrderBy(args.OrderBy);
+				}
+				count = query.Count();
+				Entities = await query.Skip(args.Skip.Value).Take(args.Top.Value).ToListAsync();
+			}
+		}
+		catch (Exception ex)
+		{
+			ErrorMessages.Add(DateTime.Now + ", Exception: " + ex.Message + (ex.InnerException == null ? "" : ",   InnerExeption: " + ex.InnerException.Message));
+		}
+		isLoading = false;
+	}
+}
