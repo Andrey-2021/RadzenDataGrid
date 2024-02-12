@@ -2,16 +2,13 @@
 @using Microsoft.EntityFrameworkCore
 @using Radzen
 @using System.Linq.Dynamic.Core;
-
 <PageTitle>Home</PageTitle>
-<h1>Hello, world!</h1>
-
 
 <div style="margin:5px;">
 	<RadzenButton Click="OnSave">First step -> Add Data to Db</RadzenButton>
 </div>
 <div style="margin:5px;">
-	<RadzenButton Click="OnLoadAllDataFromDb">Second step -> Load data from Db</RadzenButton>
+	<RadzenButton Click="OnLoadAllDataFromDb">Second step -> Load data from Db with OrderBy(x=>x.ServiceBase.Code)</RadzenButton>
 </div>
 
 @if (DataFromDb != null)
@@ -33,7 +30,7 @@
 					<td>@item.Id</td>
 					<td>@item.ServiceBase.Index</td>
 					<td>@item.ServiceBase.Code></td>
-					<td>@item.ServiceBase.ServiceName></td>
+					<td>@item.ServiceBase.ServiceName</td>
 				</tr>
 			}
 		</tbody>
@@ -75,7 +72,7 @@
 	</Columns>
 </RadzenDataGrid>
 
-@if (ErrorMessages.Count>0)
+@if (ErrorMessages.Count > 0)
 {
 	@foreach (var item in ErrorMessages)
 	{
@@ -100,8 +97,8 @@
 		{
 			var data = new List<PriceListService>()
 			{
-				new (){ServiceBase=new (){Index=10,Code="a-001", ServiceName="Message"}},
-				new() {ServiceBase = new() { Index = 11, Code = "b-002", ServiceName = "Info" } },
+				new() {ServiceBase = new (){ Index = 10, Code = "b-001", ServiceName="Message"}},
+				new() {ServiceBase = new() { Index = 11, Code = "a-002", ServiceName = "Info" } },
 				new() {ServiceBase = new() { Index = 12, Code = "w-003", ServiceName = "Word" } },
 				new() {ServiceBase = new() { Index = 13, Code = "f-004", ServiceName = "Hi" } },
 				new() {ServiceBase = new() { Index = 14, Code = "z-005", ServiceName = "Zoom" } }
@@ -117,12 +114,12 @@
 		{
 			using (var db = DbFactory.CreateDbContext())
 			{
-				DataFromDb = await db.PriceListServices.ToListAsync();
+				DataFromDb = await db.PriceListServices.OrderBy(x => x.ServiceBase.Code).ToListAsync();
 			}
 		}
 		catch (Exception ex)
 		{
-			ErrorMessages.Add(DateTime.Now+ "? Exception: " + ex.Message+ (ex.InnerException == null ? "" : ",   InnerExeption: " + ex.InnerException.Message));
+			ErrorMessages.Add(DateTime.Now + "? Exception: " + ex.Message + (ex.InnerException == null ? "" : ",   InnerExeption: " + ex.InnerException.Message));
 		}
 	}
 
